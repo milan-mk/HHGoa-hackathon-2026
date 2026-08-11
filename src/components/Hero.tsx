@@ -1,9 +1,7 @@
 export function Hero() {
   return (
-    <section className="pt-9 pb-2">
-      <span className="block font-mono text-xs font-semibold text-goa-pink-dark tracking-[0.12em] uppercase mb-2.5">
-        Task #1 · Frame &amp; ID card generator
-      </span>
+    <section className="pt-9 pb-6">
+
       <h1 className="font-display font-extrabold text-goa-green-dark leading-[1.05] max-w-[720px] text-[32px] sm:text-[44px] lg:text-[52px]">
         Generate your HH Goa 2026 frame
       </h1>

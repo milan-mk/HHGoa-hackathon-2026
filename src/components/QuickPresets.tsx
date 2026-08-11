@@ -22,7 +22,7 @@ function createAvatarSvg(bg: string, emoji: string) {
 const SAMPLE_PRESETS: Preset[] = [
   {
     id: 'ai-hacker',
-    name: 'Milan Modak',
+    name: 'Virat Kohli',
     role: 'AI Engineer',
     stack: 'React, Groq API, FastAPI, Python',
     skills: ['AI / LLM', 'React', 'Python', 'FastAPI'],
@@ -31,7 +31,7 @@ const SAMPLE_PRESETS: Preset[] = [
   },
   {
     id: 'solana-dev',
-    name: 'Alex Rivera',
+    name: 'Rohit sharma',
     role: 'Web3 Architect',
     stack: 'Rust, Solana, TypeScript, Next.js',
     skills: ['Solana', 'Rust', 'TypeScript', 'Smart Contracts'],

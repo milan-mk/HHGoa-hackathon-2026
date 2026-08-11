@@ -38,7 +38,7 @@ function App() {
 
       <main className="max-w-[1120px] mx-auto px-4 sm:px-6">
         <Hero />
-        <StepsNav />
+
         <QuickPresets onApplyPreset={applyPreset} />
 
         <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-8 pb-16 items-start">
