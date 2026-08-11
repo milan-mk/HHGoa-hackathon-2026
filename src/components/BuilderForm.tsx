@@ -37,7 +37,7 @@ export function BuilderForm({
           type="text"
           value={name}
           onChange={(e) => onName(e.target.value)}
-          placeholder="e.g. Milan Kumar Modak"
+          placeholder="e.g. Your Name"
           className="w-full px-3.5 py-2.5 rounded-[9px] border border-goa-line bg-cream-2 text-sm focus:outline-none focus:border-goa-pink"
         />
       </div>
