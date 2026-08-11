@@ -1,0 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-cream: #FBF3DD;
+  --color-cream-2: #F5EBCF;
+  --color-goa-green: #1B5E3F;
+  --color-goa-green-dark: #123F2A;
+  --color-goa-pink: #E91467;
+  --color-goa-pink-dark: #B80E50;
+  --color-goa-amber: #F4C430;
+  --color-goa-ink: #1A1A1A;
+  --color-goa-ink-soft: #4A4A42;
+  --color-goa-line: #E4D9B8;
+
+  --font-display: 'Playfair Display', serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+body {
+  background-color: var(--color-cream);
+  color: var(--color-goa-ink);
+  font-family: var(--font-body);
+}
+
+.bg-dot-texture {
+  background-image: radial-gradient(circle, rgba(27,94,63,0.06) 1.5px, transparent 1.5px);
+  background-size: 22px 22px;
+}
