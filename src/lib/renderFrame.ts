@@ -17,13 +17,18 @@ import {
 import type { BuilderState } from '../types'
 
 export async function renderFrame(canvas: HTMLCanvasElement, state: BuilderState) {
-  // 2X HIGH-DPI RETINA CANVAS RESOLUTION FOR ULTRA-CRISP ZERO-BLUR TEXT
   const scale = 2
   const logicalSize = 640
-  canvas.width = logicalSize * scale
-  canvas.height = logicalSize * scale
+  const targetSize = logicalSize * scale
 
-  const ctx = canvas.getContext('2d')
+  if (canvas.width !== targetSize) canvas.width = targetSize
+  if (canvas.height !== targetSize) canvas.height = targetSize
+
+  const offscreen = document.createElement('canvas')
+  offscreen.width = targetSize
+  offscreen.height = targetSize
+
+  const ctx = offscreen.getContext('2d')
   if (!ctx) return
 
   ctx.save()
@@ -90,7 +95,8 @@ export async function renderFrame(canvas: HTMLCanvasElement, state: BuilderState
     ctx.fillRect(cx - circleR, cy - circleR, circleR * 2, circleR * 2)
   } else if (photos.length === 1) {
     const img = await loadImage(photos[0] as string)
-    drawCoverImage(ctx, img, cx - circleR, cy - circleR, circleR * 2, circleR * 2)
+    const pos = state.photoPositions[0] || { x: 0, y: 0, zoom: 1 }
+    drawCoverImage(ctx, img, cx - circleR, cy - circleR, circleR * 2, circleR * 2, pos.x, pos.y, pos.zoom)
   } else {
     const cols = photos.length <= 2 ? photos.length : 2
     const rows = Math.ceil(photos.length / cols)
@@ -102,7 +108,8 @@ export async function renderFrame(canvas: HTMLCanvasElement, state: BuilderState
       const row = Math.floor(i / cols)
       const x = cx - circleR + col * cellW
       const y = cy - circleR + row * cellH
-      drawCoverImage(ctx, img, x, y, cellW, cellH)
+      const pos = state.photoPositions[i] || { x: 0, y: 0, zoom: 1 }
+      drawCoverImage(ctx, img, x, y, cellW, cellH, pos.x, pos.y, pos.zoom)
     }
   }
   ctx.restore()
@@ -143,4 +150,10 @@ export async function renderFrame(canvas: HTMLCanvasElement, state: BuilderState
   ctx.fillText(roleText, cx, badgeY + 19)
 
   ctx.restore()
+
+  const targetCtx = canvas.getContext('2d')
+  if (targetCtx) {
+    targetCtx.clearRect(0, 0, targetSize, targetSize)
+    targetCtx.drawImage(offscreen, 0, 0)
+  }
 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import type { BuilderState, CardTheme, FrameMode, OutputMode } from '../types'
+import type { BuilderState, CardTheme, FrameMode, OutputMode, PhotoPosition } from '../types'
 import { generateBuilderClass } from '../lib/builderClass'
 import { renderFrame } from '../lib/renderFrame'
 import { renderIDCard } from '../lib/renderIDCard'
@@ -11,12 +11,22 @@ const getDefaultUrl = () => {
   return 'http://localhost:5173'
 }
 
+const INITIAL_POSITIONS: PhotoPosition[] = [
+  { x: 0, y: 0, zoom: 1 },
+  { x: 0, y: 0, zoom: 1 },
+  { x: 0, y: 0, zoom: 1 },
+  { x: 0, y: 0, zoom: 1 },
+]
+
 const INITIAL_STATE: BuilderState = {
   mode: 'solo',
   photos: [null, null, null, null],
+  photoPositions: INITIAL_POSITIONS,
+  activePhotoSlot: 0,
   name: '',
   stack: 'React, TypeScript, Tailwind, AI',
   builderClass: generateBuilderClass('React, TypeScript, Tailwind, AI'),
+  houseName: 'HH Goa 2026',
   output: 'frame',
   webAppUrl: getDefaultUrl(),
   cardTheme: 'emerald',
@@ -54,6 +64,39 @@ export function useBuilderStudio() {
     setState((s) => ({ ...s, stack, builderClass: generateBuilderClass(stack) }))
   }, [])
 
+  const setBuilderClass = useCallback((builderClass: string) => {
+    setState((s) => ({ ...s, builderClass }))
+  }, [])
+
+  const setHouseName = useCallback((houseName: string) => {
+    setState((s) => ({ ...s, houseName }))
+  }, [])
+
+  const updatePhotoPosition = useCallback((slotIndex: number, update: Partial<PhotoPosition>) => {
+    setState((s) => {
+      const photoPositions = [...s.photoPositions]
+      const current = photoPositions[slotIndex] || { x: 0, y: 0, zoom: 1 }
+      photoPositions[slotIndex] = {
+        x: update.x !== undefined ? Math.max(-1, Math.min(1, update.x)) : current.x,
+        y: update.y !== undefined ? Math.max(-1, Math.min(1, update.y)) : current.y,
+        zoom: update.zoom !== undefined ? Math.max(1, Math.min(3, update.zoom)) : current.zoom,
+      }
+      return { ...s, photoPositions }
+    })
+  }, [])
+
+  const resetPhotoPosition = useCallback((slotIndex: number) => {
+    setState((s) => {
+      const photoPositions = [...s.photoPositions]
+      photoPositions[slotIndex] = { x: 0, y: 0, zoom: 1 }
+      return { ...s, photoPositions }
+    })
+  }, [])
+
+  const setActivePhotoSlot = useCallback((slotIndex: number) => {
+    setState((s) => ({ ...s, activePhotoSlot: slotIndex }))
+  }, [])
+
   const setWebAppUrl = useCallback((webAppUrl: string) => {
     setState((s) => ({ ...s, webAppUrl }))
   }, [])
@@ -82,7 +125,9 @@ export function useBuilderStudio() {
     setState((s) => {
       const photos = [...s.photos]
       photos[index] = dataUrl
-      return { ...s, photos }
+      const photoPositions = [...s.photoPositions]
+      photoPositions[index] = { x: 0, y: 0, zoom: 1 }
+      return { ...s, photos, photoPositions, activePhotoSlot: index }
     })
   }, [])
 
@@ -96,6 +141,8 @@ export function useBuilderStudio() {
     setState((s) => {
       const photos = [...s.photos]
       photos[0] = preset.photo
+      const photoPositions = [...s.photoPositions]
+      photoPositions[0] = { x: 0, y: 0, zoom: 1 }
       return {
         ...s,
         name: preset.name,
@@ -104,6 +151,8 @@ export function useBuilderStudio() {
         cardTheme: preset.theme,
         builderClass: generateBuilderClass(preset.stack),
         photos,
+        photoPositions,
+        activePhotoSlot: 0,
       }
     })
   }, [])
@@ -138,6 +187,11 @@ export function useBuilderStudio() {
     setOutput,
     setName,
     setStack,
+    setBuilderClass,
+    setHouseName,
+    updatePhotoPosition,
+    resetPhotoPosition,
+    setActivePhotoSlot,
     setWebAppUrl,
     setCardTheme,
     toggleSkillTag,
