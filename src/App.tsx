@@ -1,6 +1,5 @@
 import { Header } from './components/Header'
 import { Hero } from './components/Hero'
-import { StepsNav } from './components/StepsNav'
 import { ModeToggle } from './components/ModeToggle'
 import { Dropzone } from './components/Dropzone'
 import { SlotGrid } from './components/SlotGrid'
@@ -23,6 +22,10 @@ function App() {
     setOutput,
     setName,
     setStack,
+    setBuilderClass,
+    updatePhotoPosition,
+    resetPhotoPosition,
+    setActivePhotoSlot,
     setCardTheme,
     toggleSkillTag,
     setPhoto,
@@ -31,6 +34,10 @@ function App() {
     download,
     shareToX,
   } = useBuilderStudio()
+
+  const hasPhoto = state.photos.some(Boolean)
+  const activeSlot = state.activePhotoSlot || 0
+  const activePosition = state.photoPositions[activeSlot] || { x: 0, y: 0, zoom: 1 }
 
   return (
     <div className="min-h-screen bg-dot-texture">
@@ -56,7 +63,13 @@ function App() {
                 reader.readAsDataURL(file)
               }}
             />
-            <SlotGrid mode={state.mode} photos={state.photos} onSetPhoto={setPhoto} />
+            <SlotGrid
+              mode={state.mode}
+              photos={state.photos}
+              activePhotoSlot={activeSlot}
+              onSetPhoto={setPhoto}
+              onSelectSlot={setActivePhotoSlot}
+            />
             <BuilderForm
               name={state.name}
               stack={state.stack}
@@ -65,6 +78,7 @@ function App() {
               selectedSkills={state.selectedSkills}
               onName={setName}
               onStack={setStack}
+              onBuilderClass={setBuilderClass}
               onSelectTheme={setCardTheme}
               onToggleSkill={toggleSkillTag}
             />
@@ -80,7 +94,15 @@ function App() {
             <CanvasStage
               canvasRef={canvasRef}
               outputMode={state.output}
+              activePhotoSlot={activeSlot}
+              photoPosition={activePosition}
+              hasPhoto={hasPhoto}
+              mode={state.mode}
+              photos={state.photos}
               onOpenQRModal={() => setIsQRModalOpen(true)}
+              onUpdatePosition={(update) => updatePhotoPosition(activeSlot, update)}
+              onResetPosition={() => resetPhotoPosition(activeSlot)}
+              onSelectSlot={setActivePhotoSlot}
             />
             <ActionButtons
               onDownload={download}

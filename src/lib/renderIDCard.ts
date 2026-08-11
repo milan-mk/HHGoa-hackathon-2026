@@ -106,15 +106,37 @@ const THEMES: Record<CardTheme, ThemeColors> = {
   },
 }
 
+const qrCache = new Map<string, HTMLImageElement>()
+
+async function getCachedQR(url: string, dark: string, light: string): Promise<HTMLImageElement> {
+  const cacheKey = `${url}_${dark}_${light}`
+  if (qrCache.has(cacheKey)) {
+    return qrCache.get(cacheKey)!
+  }
+  const qrDataUrl = await QRCode.toDataURL(url, {
+    margin: 1,
+    color: { dark, light },
+  })
+  const img = await loadImage(qrDataUrl)
+  qrCache.set(cacheKey, img)
+  return img
+}
+
 export async function renderIDCard(canvas: HTMLCanvasElement, state: BuilderState) {
-  // 2X HIGH-DPI RETINA CANVAS RESOLUTION FOR ULTRA-CRISP ZERO-BLUR TEXT
   const scale = 2
   const logicalW = 480
   const logicalH = 760
-  canvas.width = logicalW * scale
-  canvas.height = logicalH * scale
+  const targetW = logicalW * scale
+  const targetH = logicalH * scale
 
-  const ctx = canvas.getContext('2d')
+  if (canvas.width !== targetW) canvas.width = targetW
+  if (canvas.height !== targetH) canvas.height = targetH
+
+  const offscreen = document.createElement('canvas')
+  offscreen.width = targetW
+  offscreen.height = targetH
+
+  const ctx = offscreen.getContext('2d')
   if (!ctx) return
 
   ctx.save()
@@ -209,11 +231,12 @@ export async function renderIDCard(canvas: HTMLCanvasElement, state: BuilderStat
   roundRect(ctx, px, py, photoSize, photoSize, 20)
   ctx.clip()
 
-  const photo = state.photos.find(Boolean)
-  if (photo) {
+  const photoIndex = state.photos.findIndex(Boolean)
+  if (photoIndex !== -1 && state.photos[photoIndex]) {
     try {
-      const img = await loadImage(photo)
-      drawCoverImage(ctx, img, px, py, photoSize, photoSize)
+      const img = await loadImage(state.photos[photoIndex] as string)
+      const pos = state.photoPositions[photoIndex] || { x: 0, y: 0, zoom: 1 }
+      drawCoverImage(ctx, img, px, py, photoSize, photoSize, pos.x, pos.y, pos.zoom)
     } catch {
       ctx.fillStyle = theme.headerBgStart
       ctx.fillRect(px, py, photoSize, photoSize)
@@ -315,14 +338,7 @@ export async function renderIDCard(canvas: HTMLCanvasElement, state: BuilderStat
 
   try {
     const webUrl = typeof window !== 'undefined' ? window.location.href.split('?')[0].split('#')[0] : 'https://hhgoa.com'
-    const qrDataUrl = await QRCode.toDataURL(webUrl, {
-      margin: 1,
-      color: {
-        dark: theme.qrDark,
-        light: theme.qrLight,
-      },
-    })
-    const qrImg = await loadImage(qrDataUrl)
+    const qrImg = await getCachedQR(webUrl, theme.qrDark, theme.qrLight)
 
     // QR Background Box
     ctx.fillStyle = theme.qrLight
@@ -396,4 +412,11 @@ export async function renderIDCard(canvas: HTMLCanvasElement, state: BuilderStat
 
   ctx.restore()
   ctx.restore()
+
+  // Copy offscreen double buffer to target visible canvas atomically
+  const targetCtx = canvas.getContext('2d')
+  if (targetCtx) {
+    targetCtx.clearRect(0, 0, targetW, targetH)
+    targetCtx.drawImage(offscreen, 0, 0)
+  }
 }

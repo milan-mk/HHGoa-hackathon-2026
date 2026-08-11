@@ -22,10 +22,22 @@ export const COLORS = {
   ink: '#072E1C',
 }
 
+const imageCache = new Map<string, HTMLImageElement>()
+
 export function loadImage(src: string): Promise<HTMLImageElement> {
+  if (!src) return Promise.reject(new Error('No src provided'))
+  if (imageCache.has(src)) {
+    const cached = imageCache.get(src)!
+    if (cached.complete && cached.naturalWidth > 0) {
+      return Promise.resolve(cached)
+    }
+  }
   return new Promise((resolve, reject) => {
     const img = new Image()
-    img.onload = () => resolve(img)
+    img.onload = () => {
+      imageCache.set(src, img)
+      resolve(img)
+    }
     img.onerror = reject
     img.src = src
   })
@@ -37,22 +49,42 @@ export function drawCoverImage(
   x: number,
   y: number,
   w: number,
-  h: number
+  h: number,
+  offsetX = 0,
+  offsetY = 0,
+  zoom = 1
 ) {
+  const safeZoom = Math.max(1, zoom || 1)
   const imgRatio = img.width / img.height
   const boxRatio = w / h
-  let sx: number, sy: number, sw: number, sh: number
+  let baseW: number, baseH: number
+
   if (imgRatio > boxRatio) {
-    sh = img.height
-    sw = sh * boxRatio
-    sx = (img.width - sw) / 2
-    sy = 0
+    baseH = img.height
+    baseW = baseH * boxRatio
   } else {
-    sw = img.width
-    sh = sw / boxRatio
-    sx = 0
-    sy = (img.height - sh) / 2
+    baseW = img.width
+    baseH = baseW / boxRatio
   }
+
+  const sw = baseW / safeZoom
+  const sh = baseH / safeZoom
+
+  const defaultSx = (img.width - sw) / 2
+  const defaultSy = (img.height - sh) / 2
+
+  const slackX = (img.width - sw) / 2
+  const slackY = (img.height - sh) / 2
+
+  let sx = defaultSx - offsetX * (slackX > 0 ? slackX : sw * 0.4)
+  let sy = defaultSy - offsetY * (slackY > 0 ? slackY : sh * 0.4)
+
+  const maxSx = Math.max(0, img.width - sw)
+  const maxSy = Math.max(0, img.height - sh)
+
+  sx = Math.max(0, Math.min(maxSx, sx))
+  sy = Math.max(0, Math.min(maxSy, sy))
+
   ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h)
 }
 
