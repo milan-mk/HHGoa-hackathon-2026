@@ -11,6 +11,19 @@ const getDefaultUrl = () => {
   return 'http://localhost:5173'
 }
 
+function dataURLtoBlob(dataUrl: string): Blob {
+  const arr = dataUrl.split(',')
+  const mimeMatch = arr[0].match(/:(.*?);/)
+  const mime = mimeMatch ? mimeMatch[1] : 'image/png'
+  const bstr = atob(arr[1])
+  let n = bstr.length
+  const u8arr = new Uint8Array(n)
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n)
+  }
+  return new Blob([u8arr], { type: mime })
+}
+
 const INITIAL_POSITIONS: PhotoPosition[] = [
   { x: 0, y: 0, zoom: 1 },
   { x: 0, y: 0, zoom: 1 },
@@ -36,7 +49,22 @@ const INITIAL_STATE: BuilderState = {
 export function useBuilderStudio() {
   const [state, setState] = useState<BuilderState>(INITIAL_STATE)
   const [isQRModalOpen, setIsQRModalOpen] = useState(false)
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  const showToast = useCallback((msg: string | null, duration = 4000) => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current)
+      toastTimeoutRef.current = null
+    }
+    setToastMessage(msg)
+    if (msg && duration > 0) {
+      toastTimeoutRef.current = setTimeout(() => {
+        setToastMessage(null)
+      }, duration)
+    }
+  }, [])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -160,7 +188,7 @@ export function useBuilderStudio() {
   const buildCaption = useCallback(() => {
     return `Just created my official ${
       state.output === 'id' ? 'Builder ID Card' : 'HH Goa 2026 frame'
-    } \u{1F334} Scan the QR code or click the link to generate yours! #FrameInGoa`
+    } 🌴 Scan the QR code or click the link to generate yours! #FrameInGoa`
   }, [state.output])
 
   const download = useCallback(() => {
@@ -168,21 +196,64 @@ export function useBuilderStudio() {
     if (!canvas) return
     const link = document.createElement('a')
     const safeName = (state.name || 'builder').replace(/\s+/g, '-').toLowerCase()
-    link.download = `hhgoa-2026-${state.output}-${safeName}.png`
+    const filename = `hhgoa-2026-${state.output}-${safeName}.png`
+    link.download = filename
     link.href = canvas.toDataURL('image/png')
     link.click()
-  }, [state.name, state.output])
+    showToast(`✅ ${state.output === 'id' ? 'Builder ID Card' : 'HH Goa Frame'} saved to downloads!`)
+  }, [state.name, state.output, showToast])
 
-  const shareToX = useCallback(() => {
-    const text = encodeURIComponent(buildCaption())
-    window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank')
-  }, [buildCaption])
+  const shareToX = useCallback(async () => {
+    const canvas = canvasRef.current
+    const caption = buildCaption()
+
+    // 1. Immediately open X (Twitter) intent window directly
+    const encodedText = encodeURIComponent(caption)
+    window.open(`https://x.com/intent/post?text=${encodedText}`, '_blank')
+
+    if (!canvas) return
+
+    const safeName = (state.name || 'builder').replace(/\s+/g, '-').toLowerCase()
+    const fileName = `hhgoa-2026-${state.output}-${safeName}.png`
+    const dataUrl = canvas.toDataURL('image/png')
+    const blob = dataURLtoBlob(dataUrl)
+
+    // 2. Copy image blob to system clipboard so user can press Ctrl+V / ⌘+V directly in the X composer
+    let copiedToClipboard = false
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+        await navigator.clipboard.write([
+          new ClipboardItem({ [blob.type]: blob }),
+        ])
+        copiedToClipboard = true
+      }
+    } catch (err) {
+      console.warn('Clipboard write failed:', err)
+    }
+
+    // 3. Download PNG file to user's device as backup
+    const link = document.createElement('a')
+    link.download = fileName
+    const blobUrl = URL.createObjectURL(blob)
+    link.href = blobUrl
+    link.click()
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000)
+
+    // 4. Notify user with instructions
+    if (copiedToClipboard) {
+      showToast('📸 Image copied to clipboard & downloaded! Press Ctrl+V (⌘+V) to paste into your tweet.', 6000)
+    } else {
+      showToast('📸 Image saved to downloads! Attach the downloaded file to your tweet.', 6000)
+    }
+  }, [buildCaption, state.name, state.output, showToast])
 
   return {
     state,
     canvasRef,
     isQRModalOpen,
+    toastMessage,
     setIsQRModalOpen,
+    showToast,
     setMode,
     setOutput,
     setName,
@@ -202,4 +273,3 @@ export function useBuilderStudio() {
     shareToX,
   }
 }
-

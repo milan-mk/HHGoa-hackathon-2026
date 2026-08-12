@@ -28,3 +28,18 @@ body {
   background-image: radial-gradient(circle, rgba(27,94,63,0.06) 1.5px, transparent 1.5px);
   background-size: 22px 22px;
 }
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

@@ -10,6 +10,7 @@ import { ActionButtons } from './components/ActionButtons'
 import { CaptionBox } from './components/CaptionBox'
 import { QuickPresets } from './components/QuickPresets'
 import { QRModal } from './components/QRModal'
+import { Toast } from './components/Toast'
 import { useBuilderStudio } from './hooks/useBuilderStudio'
 
 function App() {
@@ -17,7 +18,9 @@ function App() {
     state,
     canvasRef,
     isQRModalOpen,
+    toastMessage,
     setIsQRModalOpen,
+    showToast,
     setMode,
     setOutput,
     setName,
@@ -132,6 +135,8 @@ function App() {
         webAppUrl={state.webAppUrl}
         onClose={() => setIsQRModalOpen(false)}
       />
+
+      <Toast message={toastMessage} onClose={() => showToast(null)} />
     </div>
   )
 }
