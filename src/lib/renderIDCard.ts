@@ -13,6 +13,7 @@ import {
   drawGoanVilla,
   drawTornTapeBadge,
   drawHackerHouseGoaLogo,
+  drawGoaBeachIllustrationBackground,
   COLORS,
 } from './canvasRenderer'
 import type { BuilderState, CardTheme } from '../types'
@@ -148,17 +149,15 @@ export async function renderIDCard(canvas: HTMLCanvasElement, state: BuilderStat
   const w = logicalW
   const h = logicalH
 
-  // Main Background Card Body
-  ctx.fillStyle = theme.cardBg
-  roundRect(ctx, 0, 0, w, h, 28)
-  ctx.fill()
+  // Draw vector illustration background (matching uploaded image)
+  drawGoaBeachIllustrationBackground(ctx, w, h)
 
   ctx.save()
   roundRect(ctx, 0, 0, w, h, 28)
   ctx.clip()
 
   // Outer Border Line
-  ctx.strokeStyle = theme.cardBorder
+  ctx.strokeStyle = '#0B3822'
   ctx.lineWidth = 4
   roundRect(ctx, 2, 2, w - 4, h - 4, 26)
   ctx.stroke()
@@ -271,15 +270,29 @@ export async function renderIDCard(canvas: HTMLCanvasElement, state: BuilderStat
   ctx.textAlign = 'center'
   ctx.fillText('HACKER PASS 🌴', px + photoSize / 2, py + photoSize - 12)
 
-  // --- BUILDER NAME & ROLE (HIGH-CONTRAST & PROMINENT VISIBILITY) ---
+  // --- BUILDER NAME & ROLE (WITH PADDED BLURRY WHITE BACKGROUNDS) ---
   ctx.textAlign = 'center'
 
-  // 1. Builder Name (Ultra-Bold Crisp Deep Dark Emerald Text)
-  ctx.fillStyle = theme.textPrimary
-  ctx.font = `900 30px 'Playfair Display', Georgia, serif`
+  // 1. Builder Name (Ultra-Bold Text inside Blurry White Padded Pill)
   const displayName = state.name || 'Your Name'
-  const truncatedName = displayName.length > 20 ? displayName.slice(0, 20) + '...' : displayName
-  ctx.fillText(truncatedName, w / 2, 380)
+  const truncatedName = displayName.length > 22 ? displayName.slice(0, 22) + '...' : displayName
+  ctx.font = `900 26px 'Playfair Display', Georgia, serif`
+  const nameWidth = ctx.measureText(truncatedName).width
+  const nameBoxW = Math.min(w - 60, Math.max(180, nameWidth + 36))
+  const nameBoxH = 42
+  const nameBoxX = (w - nameBoxW) / 2
+  const nameBoxY = 352
+
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.92)'
+  roundRect(ctx, nameBoxX, nameBoxY, nameBoxW, nameBoxH, 21)
+  ctx.fill()
+  ctx.strokeStyle = '#0B3822'
+  ctx.lineWidth = 1.5
+  roundRect(ctx, nameBoxX, nameBoxY, nameBoxW, nameBoxH, 21)
+  ctx.stroke()
+
+  ctx.fillStyle = '#052416'
+  ctx.fillText(truncatedName, w / 2, nameBoxY + 29)
 
   // 2. Builder Class / Role Badge (High-Contrast Styled Pill Badge)
   const roleText = (state.builderClass || 'Goa Wildcard Builder').toUpperCase()
@@ -288,7 +301,7 @@ export async function renderIDCard(canvas: HTMLCanvasElement, state: BuilderStat
   const roleBadgeW = Math.max(180, roleTextWidth + 28)
   const roleBadgeH = 28
   const roleBadgeX = (w - roleBadgeW) / 2
-  const roleBadgeY = 398
+  const roleBadgeY = 404
 
   // Pill Badge Fill & Stroke
   ctx.fillStyle = COLORS.hotPink
@@ -303,38 +316,78 @@ export async function renderIDCard(canvas: HTMLCanvasElement, state: BuilderStat
   ctx.fillStyle = '#FFFFFF'
   ctx.fillText(roleText, w / 2, roleBadgeY + 19)
 
-  // Skill Badges / Stack Chips (Max 5 items for clean spacing)
-  const allSkills = state.selectedSkills.length > 0
-    ? state.selectedSkills
-    : state.stack ? state.stack.split(',').map(s => s.trim()) : ['Fullstack', 'Web3', 'AI']
+  // Skill Badges / Stack Chips (Renders directly from stack & selected skills)
+  const parsedStackSkills = state.stack
+    ? state.stack.split(',').map((s) => s.trim()).filter(Boolean)
+    : []
 
-  const skills = allSkills.slice(0, 5)
+  const allSkills = parsedStackSkills.length > 0
+    ? parsedStackSkills
+    : state.selectedSkills.length > 0
+      ? state.selectedSkills
+      : ['Fullstack', 'Web3', 'AI']
+
+  const skillsToDraw = allSkills.slice(0, 6)
 
   ctx.font = `800 11px 'JetBrains Mono', monospace`
-  const chipsWithWidth = skills.map(skill => ({
+  const chipsWithWidth = skillsToDraw.map((skill) => ({
     skill,
-    w: ctx.measureText(skill).width + 20,
+    w: Math.min(140, ctx.measureText(skill).width + 20),
   }))
 
-  const totalSkillW = chipsWithWidth.reduce((acc, c) => acc + c.w + 6, -6)
-  let skillStartX = (w - totalSkillW) / 2
-  const skillY = 442
+  const maxRowW = 390
+  const totalSingleRowW = chipsWithWidth.reduce((acc, c) => acc + c.w + 6, -6)
 
-  chipsWithWidth.forEach(c => {
-    ctx.fillStyle = theme.chipBg
-    roundRect(ctx, skillStartX, skillY, c.w, 24, 7)
-    ctx.fill()
+  if (totalSingleRowW <= maxRowW || chipsWithWidth.length <= 3) {
+    let startX = (w - totalSingleRowW) / 2
+    const chipY = 448
+    chipsWithWidth.forEach((c) => {
+      ctx.fillStyle = theme.chipBg
+      roundRect(ctx, startX, chipY, c.w, 24, 7)
+      ctx.fill()
 
-    ctx.fillStyle = theme.chipText
-    ctx.textAlign = 'left'
-    ctx.fillText(c.skill, skillStartX + 10, skillY + 16)
-    skillStartX += c.w + 6
-  })
+      ctx.fillStyle = theme.chipText
+      ctx.textAlign = 'left'
+      ctx.fillText(c.skill, startX + 10, chipY + 16)
+      startX += c.w + 6
+    })
+  } else {
+    const row1: typeof chipsWithWidth = []
+    const row2: typeof chipsWithWidth = []
+    let currentW = 0
+
+    chipsWithWidth.forEach((c) => {
+      if (row1.length < 3 && currentW + c.w <= maxRowW) {
+        row1.push(c)
+        currentW += c.w + 6
+      } else {
+        row2.push(c)
+      }
+    })
+
+    const drawRow = (rowChips: typeof chipsWithWidth, yPos: number) => {
+      const rowW = rowChips.reduce((acc, c) => acc + c.w + 6, -6)
+      let startX = (w - rowW) / 2
+      rowChips.forEach((c) => {
+        ctx.fillStyle = theme.chipBg
+        roundRect(ctx, startX, yPos, c.w, 22, 7)
+        ctx.fill()
+
+        ctx.fillStyle = theme.chipText
+        ctx.textAlign = 'left'
+        ctx.fillText(c.skill, startX + 10, yPos + 15)
+        startX += c.w + 6
+      })
+    }
+
+    drawRow(row1, 438)
+    drawRow(row2, 464)
+  }
 
   // Scannable QR Code Section (Centered & High-Contrast)
-  const qrBoxSize = 140
+  const qrBoxSize = 135
   const qrX = (w - qrBoxSize) / 2
-  const qrY = 490
+  const qrY = 492
 
   try {
     const webUrl = typeof window !== 'undefined' ? window.location.href.split('?')[0].split('#')[0] : 'https://hhgoa.com'
@@ -382,33 +435,44 @@ export async function renderIDCard(canvas: HTMLCanvasElement, state: BuilderStat
     ctx.lineTo(qrX + qrBoxSize + 4, qrY + qrBoxSize + 4 - bracketSize)
     ctx.stroke()
 
-    // QR Scan Label
-    ctx.fillStyle = theme.textSecondary
+    // QR Scan Label inside blurry white pill
+    const scanText = 'SCAN FOR WEB APP 🌴'
     ctx.font = `800 10px 'JetBrains Mono', monospace`
+    const scanW = ctx.measureText(scanText).width + 24
+    const scanX = (w - scanW) / 2
+    const scanY = qrY + qrBoxSize + 8
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.92)'
+    roundRect(ctx, scanX, scanY, scanW, 22, 11)
+    ctx.fill()
+    ctx.strokeStyle = '#0B3822'
+    ctx.lineWidth = 1
+    roundRect(ctx, scanX, scanY, scanW, 22, 11)
+    ctx.stroke()
+
+    ctx.fillStyle = '#052416'
     ctx.textAlign = 'center'
-    ctx.fillText('SCAN FOR WEB APP 🌴', w / 2, qrY + qrBoxSize + 22)
+    ctx.fillText(scanText, w / 2, scanY + 15)
   } catch (err) {
     console.error('Failed to generate QR code:', err)
   }
 
-  // Bottom Footer Section
-  ctx.setLineDash([6, 6])
-  ctx.strokeStyle = theme.cardBorder
+  // Bottom Footer Section Bar (Padded Blurry White Backdrop Container)
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.92)'
+  roundRect(ctx, 24, h - 42, w - 48, 28, 14)
+  ctx.fill()
+  ctx.strokeStyle = '#0B3822'
   ctx.lineWidth = 1.5
-  ctx.beginPath()
-  ctx.moveTo(30, h - 50)
-  ctx.lineTo(w - 30, h - 50)
+  roundRect(ctx, 24, h - 42, w - 48, 28, 14)
   ctx.stroke()
-  ctx.setLineDash([])
 
-  // Footer Text
-  ctx.fillStyle = theme.textSecondary
-  ctx.font = `700 11px 'JetBrains Mono', monospace`
+  ctx.fillStyle = '#052416'
+  ctx.font = `800 11px 'JetBrains Mono', monospace`
   ctx.textAlign = 'left'
-  ctx.fillText(`ID-${idHash(state.name)} • 2026.11.08`, 30, h - 22)
+  ctx.fillText(`ID-${idHash(state.name)} • 2026.11.08`, 38, h - 24)
 
   ctx.textAlign = 'right'
-  ctx.fillText(`🌴 GOA, INDIA 🌊`, w - 30, h - 22)
+  ctx.fillText(`🌴 GOA, INDIA 🌊`, w - 38, h - 24)
 
   ctx.restore()
   ctx.restore()

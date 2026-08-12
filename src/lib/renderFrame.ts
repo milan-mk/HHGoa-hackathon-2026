@@ -6,12 +6,12 @@ import {
   loadImage,
   drawDualColorPalmTree,
   drawBeachWave,
-  drawGoaSunset,
   drawSparkleStar,
   drawSurfboardsPair,
   drawGoanScooter,
   drawTornTapeBadge,
   drawHackerHouseGoaLogo,
+  drawGoaBeachIllustrationBackground,
   roundRect,
 } from './canvasRenderer'
 import type { BuilderState } from '../types'
@@ -38,22 +38,13 @@ export async function renderFrame(canvas: HTMLCanvasElement, state: BuilderState
 
   const size = logicalSize
 
-  // Vibrant Goa Beach Sky Gradient (Emerald to Sand Cream)
-  const bgGradient = ctx.createLinearGradient(0, 0, 0, size)
-  bgGradient.addColorStop(0, COLORS.emeraldDark)
-  bgGradient.addColorStop(0.35, COLORS.emerald)
-  bgGradient.addColorStop(0.7, COLORS.sandCream)
-  bgGradient.addColorStop(1, '#FFFFFF')
-  ctx.fillStyle = bgGradient
-  ctx.fillRect(0, 0, size, size)
+  // Draw vector illustration background (matching uploaded image)
+  drawGoaBeachIllustrationBackground(ctx, size, size)
 
-  // Golden Goa Sunset Disk at Top Horizon
-  drawGoaSunset(ctx, size / 2, 70, 48, COLORS.amberGold, COLORS.amberGold)
-
-  // Top Header Logo Banner: Official Goa Hacker House Logo (hhgoa.com)
+  // Top Header Logo Banner: Official Goa Hacker House Logo
   drawHackerHouseGoaLogo(ctx, size / 2 - 135, 12, 270, 42)
 
-  // Yellow Torn Paper Badge ("VERIFIED!" - matching Image 1)
+  // Yellow Torn Paper Badge ("VERIFIED!")
   drawTornTapeBadge(ctx, 85, 24, 'VERIFIED! ✦')
 
   // Tall Goa Beach Palm Trees on Left and Right Sides
@@ -121,13 +112,28 @@ export async function renderFrame(canvas: HTMLCanvasElement, state: BuilderState
   // Bottom Wave Divider under Photo Circle
   drawBeachWave(ctx, cx - 150, cy + circleR + 14, 300, 8, COLORS.amberGold)
 
-  // --- BUILDER NAME & ROLE (HIGH-CONTRAST, PROMINENT, NEVER CUT OFF) ---
+  // --- BUILDER NAME & ROLE (WITH PADDED BLURRY WHITE BACKGROUNDS) ---
   ctx.textAlign = 'center'
 
-  // 1. Builder Name (Ultra-Bold Crisp Deep Dark Emerald Text)
+  // 1. Builder Name with Blurry White Padded Container Box
+  const nameText = state.name || 'Your Name'
+  ctx.font = `900 28px 'Playfair Display', Georgia, serif`
+  const nameWidth = ctx.measureText(nameText).width
+  const nameBoxW = Math.min(size - 80, Math.max(200, nameWidth + 40))
+  const nameBoxH = 44
+  const nameBoxX = (size - nameBoxW) / 2
+  const nameBoxY = cy + circleR + 32
+
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.92)'
+  roundRect(ctx, nameBoxX, nameBoxY, nameBoxW, nameBoxH, 22)
+  ctx.fill()
+  ctx.strokeStyle = COLORS.emeraldDark
+  ctx.lineWidth = 2
+  roundRect(ctx, nameBoxX, nameBoxY, nameBoxW, nameBoxH, 22)
+  ctx.stroke()
+
   ctx.fillStyle = COLORS.emeraldDark
-  ctx.font = `900 32px 'Playfair Display', Georgia, serif`
-  ctx.fillText(state.name || 'Your Name', cx, cy + circleR + 56)
+  ctx.fillText(nameText, cx, nameBoxY + 31)
 
   // 2. Role / Builder Class (Hot Pink Pill Badge)
   const roleText = (state.builderClass || 'Goa Wildcard Builder').toUpperCase()
@@ -136,7 +142,7 @@ export async function renderFrame(canvas: HTMLCanvasElement, state: BuilderState
   const badgeW = Math.max(190, roleWidth + 28)
   const badgeH = 28
   const badgeX = (size - badgeW) / 2
-  const badgeY = cy + circleR + 72
+  const badgeY = nameBoxY + nameBoxH + 12
 
   ctx.fillStyle = COLORS.hotPink
   roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 14)

@@ -3,6 +3,11 @@ import type { BuilderState, CardTheme, FrameMode, OutputMode, PhotoPosition } fr
 import { generateBuilderClass } from '../lib/builderClass'
 import { renderFrame } from '../lib/renderFrame'
 import { renderIDCard } from '../lib/renderIDCard'
+import {
+  AVAILABLE_SKILLS,
+  getMatchedSkillsFromStack,
+  toggleSkillInStack,
+} from '../lib/skillUtils'
 
 const getDefaultUrl = () => {
   if (typeof window !== 'undefined' && window.location.href.startsWith('http')) {
@@ -31,19 +36,21 @@ const INITIAL_POSITIONS: PhotoPosition[] = [
   { x: 0, y: 0, zoom: 1 },
 ]
 
+const INITIAL_STACK = 'React, TypeScript, Tailwind, AI / LLM'
+
 const INITIAL_STATE: BuilderState = {
   mode: 'solo',
   photos: [null, null, null, null],
   photoPositions: INITIAL_POSITIONS,
   activePhotoSlot: 0,
   name: '',
-  stack: 'React, TypeScript, Tailwind, AI',
-  builderClass: generateBuilderClass('React, TypeScript, Tailwind, AI'),
+  stack: INITIAL_STACK,
+  builderClass: generateBuilderClass(INITIAL_STACK),
   houseName: 'HH Goa 2026',
   output: 'frame',
   webAppUrl: getDefaultUrl(),
   cardTheme: 'emerald',
-  selectedSkills: ['React', 'TypeScript', 'AI / LLM'],
+  selectedSkills: getMatchedSkillsFromStack(AVAILABLE_SKILLS, INITIAL_STACK),
 }
 
 export function useBuilderStudio() {
@@ -89,7 +96,12 @@ export function useBuilderStudio() {
   }, [])
 
   const setStack = useCallback((stack: string) => {
-    setState((s) => ({ ...s, stack, builderClass: generateBuilderClass(stack) }))
+    setState((s) => ({
+      ...s,
+      stack,
+      builderClass: generateBuilderClass(stack),
+      selectedSkills: getMatchedSkillsFromStack(AVAILABLE_SKILLS, stack),
+    }))
   }, [])
 
   const setBuilderClass = useCallback((builderClass: string) => {
@@ -135,16 +147,12 @@ export function useBuilderStudio() {
 
   const toggleSkillTag = useCallback((skill: string) => {
     setState((s) => {
-      const exists = s.selectedSkills.includes(skill)
-      const newSkills = exists
-        ? s.selectedSkills.filter((item) => item !== skill)
-        : [...s.selectedSkills, skill]
-      const updatedStack = newSkills.length > 0 ? newSkills.join(', ') : s.stack
+      const updatedStack = toggleSkillInStack(skill, s.stack)
       return {
         ...s,
-        selectedSkills: newSkills,
         stack: updatedStack,
         builderClass: generateBuilderClass(updatedStack),
+        selectedSkills: getMatchedSkillsFromStack(AVAILABLE_SKILLS, updatedStack),
       }
     })
   }, [])
@@ -171,11 +179,12 @@ export function useBuilderStudio() {
       photos[0] = preset.photo
       const photoPositions = [...s.photoPositions]
       photoPositions[0] = { x: 0, y: 0, zoom: 1 }
+      const matchedSkills = getMatchedSkillsFromStack(AVAILABLE_SKILLS, preset.stack)
       return {
         ...s,
         name: preset.name,
         stack: preset.stack,
-        selectedSkills: preset.skills,
+        selectedSkills: matchedSkills.length > 0 ? matchedSkills : preset.skills,
         cardTheme: preset.theme,
         builderClass: generateBuilderClass(preset.stack),
         photos,
