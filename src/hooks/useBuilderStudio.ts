@@ -206,10 +206,11 @@ export function useBuilderStudio() {
   const shareToX = useCallback(async () => {
     const canvas = canvasRef.current
     const caption = buildCaption()
-
-    // 1. Immediately open X (Twitter) intent window directly
     const encodedText = encodeURIComponent(caption)
-    window.open(`https://x.com/intent/post?text=${encodedText}`, '_blank')
+    const encodedUrl = encodeURIComponent(state.webAppUrl)
+
+    // Open X (Twitter) intent window pre-filled with caption & web app url (enables rich graphic link preview)
+    window.open(`https://x.com/intent/post?text=${encodedText}&url=${encodedUrl}`, '_blank')
 
     if (!canvas) return
 
@@ -218,7 +219,7 @@ export function useBuilderStudio() {
     const dataUrl = canvas.toDataURL('image/png')
     const blob = dataURLtoBlob(dataUrl)
 
-    // 2. Copy image blob to system clipboard so user can press Ctrl+V / ⌘+V directly in the X composer
+    // Copy exact image blob to system clipboard so user can press Ctrl+V / ⌘+V directly in X
     let copiedToClipboard = false
     try {
       if (typeof navigator !== 'undefined' && navigator.clipboard && typeof ClipboardItem !== 'undefined') {
@@ -231,7 +232,7 @@ export function useBuilderStudio() {
       console.warn('Clipboard write failed:', err)
     }
 
-    // 3. Download PNG file to user's device as backup
+    // Download PNG file to user's device as backup
     const link = document.createElement('a')
     link.download = fileName
     const blobUrl = URL.createObjectURL(blob)
@@ -239,13 +240,13 @@ export function useBuilderStudio() {
     link.click()
     setTimeout(() => URL.revokeObjectURL(blobUrl), 10000)
 
-    // 4. Notify user with instructions
+    // Notify user
     if (copiedToClipboard) {
       showToast('📸 Image copied to clipboard & downloaded! Press Ctrl+V (⌘+V) to paste into your tweet.', 6000)
     } else {
       showToast('📸 Image saved to downloads! Attach the downloaded file to your tweet.', 6000)
     }
-  }, [buildCaption, state.name, state.output, showToast])
+  }, [buildCaption, state.name, state.output, state.webAppUrl, showToast])
 
   return {
     state,
